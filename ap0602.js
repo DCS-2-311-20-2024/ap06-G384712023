@@ -19,14 +19,15 @@ function init() {
   const scene = new THREE.Scene();
 
   // 第1のレンダラ
-  const nameHeight = document.getElementById("name").clientHeight;
+  const nameHeight = document.getElementById("output1").clientHeight;
   const renderer = new THREE.WebGLRenderer();
   {
     renderer.setClearColor(0x204060);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(
-      window.innerWidth,
-      window.innerHeight - nameHeight);
+      0.7*window.innerWidth,
+      0.5*window.innerWidth);
+     // window.innerHeight - nameHeight
     renderer.domElement.style.position = "absolute";
     renderer.domElement.style.zIndex = 1;
     renderer.domElement.style.top = nameHeight;
@@ -37,8 +38,8 @@ function init() {
   const cssRenderer = new CSS3DRenderer();
   {
     cssRenderer.setSize(
-      window.innerWidth,
-      window.innerHeight - nameHeight);
+      0.7*window.innerWidth,
+      0.5*window.innerWidth);
     cssRenderer.domElement.style.position = "absolute";
     cssRenderer.domElement.style.zIndex = 0;
     cssRenderer.domElement.style.top = nameHeight;
@@ -46,12 +47,13 @@ function init() {
 
   // カメラの作成
    const camera1 = new THREE.PerspectiveCamera(
-    50, window.innerWidth/(window.innerHeight-nameHeight), 0.1, 1000);
+    50, 7/5, 0.1, 1000);
+    //window.innerWidth/(window.innerHeight-nameHeight)
   {
     camera1.position.set(0,2,15);
     camera1.lookAt(0,0,0);
-    // camera1.position.set(-1,0,3);
-    // camera1.lookAt(0,-1.5,5);
+    //camera1.position.set(-1,0,1);
+    //camera1.lookAt(0,-1.5,5);
   }
   // 第2のカメラ
  
@@ -71,27 +73,76 @@ function init() {
   // 3D物体
   // スクリーン
   const screen = new THREE.Mesh(
-
+    new THREE.PlaneGeometry(8.0, 4.5), 
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      opacity: 0.0,
+      blenging: THREE.NoBlending,
+      side: THREE.DoubleSide
+    })
   )
-  screen.position.set(0,0,0);
-  // scene.add(screen);
+  //screen.position.set(0,0,0);
+  scene.add(screen);
   
   // 椅子
   const chair = new THREE.Group();
   {
+    const chairMaterial = new THREE.MeshLambertMaterial({color:0x802000});
+    const ch1 = new THREE.Mesh(
+      new THREE.BoxGeometry(param.w, param.h, param.d),
+      chairMaterial);
+    ch1.position.set(0, 0.3, 0);
+    chair.add(ch1);
 
+    const ch2 = new THREE.Mesh(
+      new THREE.BoxGeometry(param.w, param.d, param.h),
+      chairMaterial);
+    ch2.position.set(0, 0.3 + (param.d + param.h)/2, (param.d + param.h)/2);
+    chair.add(ch2);
+    
   }
   // 座席の生成
+  const seats = new THREE.Group();
+  for(let r = 0; r < param.nRow; r += 1)
+    for(let c = 0; c < param.nCol; c += 1){
+      const seat = chair.clone();
+      seat.position.set(
+        (param.w + param.gapX) * (c - (param.nCol - 1) / 2),
+        (param.gapZ) * r - 2,
+        (param.d + param.gapZ) * (r + 5)
+      )
+      seats.add(seat);
+  }
+  scene.add(seats);
 
+  
+  //　これまでと同じように椅子が5個あるなら2番目が真ん中になるようにする.
   // ダミーを作る関数
   function makeDummy(color) {
+    const dummy = new THREE.Group();
+    {
+      const dhead = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 12, 12),
+        new THREE.MeshLambertMaterial({color: color})
+      )
+      dummy.add(dhead);
 
+      const dbody = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.2, 0.3, 12, 1), 
+        new THREE.MeshLambertMaterial({color: color})
+      )
+      dbody.position.set(0, -0.3, 0);
+      dummy.add(dbody);
+    }
+    return dummy;
   }
 
   // 他の観客
 
   // アバターの生成
-
+  const avater = makeDummy("white");
+  avater.position.set(0, -1.2, 5);
+  scene.add(avater);
   // アバターの移動
   function setAvatar(position){
 
@@ -115,7 +166,7 @@ function init() {
 
   // レンダラーの配置
   document.getElementById("output1").appendChild(cssRenderer.domElement);
-  // document.getElementById("output1").appendChild(renderer.domElement);
+  //document.getElementById("output1").appendChild(renderer.domElement);
 
   // シート選択のための設定
   const raycaster = new THREE.Raycaster();
@@ -132,14 +183,14 @@ function init() {
 
   // Windowサイズの変更処理
   window.addEventListener("resize", ()=>{
-    // cssRenderer.setSize( window.innerWidth, window.innerHeight-nameHeight );
-    // renderer.setSize( window.innerWidth, window.innerHeight-nameHeight );
+    cssRenderer.setSize( 0.7*window.innerWidth, 0.5*window.innerWidth );
+    renderer.setSize( 0.7*window.innerWidth, 0.5*window.innerWidth );
   }, false);
 
   // 描画処理
   function update(time) {
     cssRenderer.render(scene, camera1);
-    // renderer.render(scene, camera1);
+    renderer.render(scene, camera1);
     requestAnimationFrame(update);
   }
 
