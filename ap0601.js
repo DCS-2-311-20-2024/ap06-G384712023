@@ -41,16 +41,18 @@ function init() {
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(canvasWidth, canvasHeight);
   renderer.setClearColor(0x406080);
-  // renderer.domElement.style.position = "absolute";
-  // renderer.domElement.style.top = nameHeight;
+  renderer.domElement.style.position = "absolute";
+  renderer.domElement.style.top = nameHeight;
   document.getElementById("canvas").appendChild(renderer.domElement);
 
+  renderer.shadowMap.enabled = true;
+
   // CSSRenderer の追加
-  // const cssRenderer = new CSS3DRenderer();
-  // cssRenderer.setSize(canvasWidth, canvasHeight);
-  // cssRenderer.domElement.style.position = "absolute";
-  // cssRenderer.domElement.style.top = nameHeight;
-  // document.getElementById("canvas").appendChild(cssRenderer.domElement);
+  const cssRenderer = new CSS3DRenderer();
+  cssRenderer.setSize(canvasWidth, canvasHeight);
+  cssRenderer.domElement.style.position = "absolute";
+  cssRenderer.domElement.style.top = nameHeight;
+  document.getElementById("canvas").appendChild(cssRenderer.domElement);
 
   // カメラの設定
   const camera = new THREE.PerspectiveCamera(
@@ -70,6 +72,7 @@ function init() {
   const ambLight = new THREE.AmbientLight(0x404040, 20);
   scene.add(ambLight);
 
+  dirLight.castShadow = true;
  
   // CSSRenderer で表示する iframe要素を作る
   const iframe = document.createElement("iframe");
@@ -78,6 +81,11 @@ function init() {
   iframe.style.border = "0px";
   iframe.src = "https://feng.takushoku-u.ac.jp/course/cs/";
 
+  const webPage = new CSS3DObject(iframe);
+  webPage.scale.x *= (dpy.W - dpy.E) / 640;
+  webPage.scale.y *= (dpy.H - dpy.E) / 360;
+  webPage.position.set(0,0,dpy.D/2);
+  scene.add(webPage);
 
 
 
@@ -85,49 +93,64 @@ function init() {
 
 
   // カメラ制御
-  const orbitControls = new OrbitControls(camera, renderer.domElement);
+  const orbitControls = new OrbitControls(camera, cssRenderer.domElement);
   orbitControls.enableDumping = true;
+  orbitControls.minAzimuthAngle = -Math.PI/2;
+  orbitControls.maxAzimuthAngle = Math.PI/2;
 
   // ディスプレイ
   const display = new THREE.Group();
   {
     // 表示部
     const silverMaterial = new THREE.MeshPhongMaterial({color: "silver"});
+    const blackMaterial = new THREE.MeshPhongMaterial({color: "black"});
     const face = new THREE.Mesh(
       new THREE.BoxGeometry(dpy.W, dpy.H, dpy.D),
-      silverMaterial
+      [ silverMaterial, silverMaterial, silverMaterial,
+        silverMaterial, blackMaterial, silverMaterial ]
     );
     display.add(face);
     // スタンド台
     const standBase = new THREE.Mesh(
-      
-      
-    )
-    
-    //display.add(standBase);    
+      new THREE.BoxGeometry(std.W, std.T, std.D),
+      silverMaterial
+      )
+    standBase.position.y = -(dpy.H/4 + std.H);   
+    display.add(standBase);    
+
     // スタンド脚
     const theta = Math.PI/8;
     const standBack = new THREE.Mesh(
-      
-      
-      
-      
-      
-    );
-    
-
-    
-
-
-
-    //display.add(standBack);
+      new THREE.BoxGeometry(
+        std.W ,
+        std.H / Math.cos(theta),
+        std.T ),
+        silverMaterial
+      )
+      standBack.rotation.x = theta;
+      standBack.position.set(
+        0,
+        -(dpy.H/4 + std.H/2),
+        -(std.H * Math.tan(theta)) / 2 );
+    display.add(standBack);
 
     // 影の設定
   }
   scene.add(display);
 
-  // デスク
+  display.children.forEach((mesh) => {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  });
 
+  // デスク
+  const desk = new THREE.Mesh(
+    new THREE.PlaneGeometry(10,6),
+    new THREE.MeshLambertMaterial({color: 0xb08030})
+  );
+  desk.rotation.x = -Math.PI / 2;
+  desk.position.y = -(dpy.H/4 + std.H + std.T/2);
+  scene.add(desk);
   // 描画関数の定義
   function render() {
     axes.visible = params.axes;
@@ -138,18 +161,21 @@ function init() {
     // WebGL レンダラ
     renderer.render(scene, camera);
     // CSS3D レンダラ
-
+    cssRenderer.render(scene, camera);
     requestAnimationFrame(render);
   }
 
+  desk.castShadow = true;
+  desk.receiveShadow = true;
+
   // サイズ変更
   window.addEventListener("resize", () => {
-
-
-
-
-
-
+    canvasHeight = window.innerHeight - nameHeight;
+    canvasWidth = window.innerWidth;
+    camera.aspect = canvasWidth / canvasHeight;
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(canvasWidth, canvasHeight);
+    cssRenderer.setSize(canvasWidth, canvasHeight);
   });
   
   // GUIコントローラ
